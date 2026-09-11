@@ -191,6 +191,21 @@ button.primary { background: var(--accent, #0b3d91); color: #fff; border-color: 
 
 .weather-panel { position: absolute; top: 64px; right: 12px; width: 260px; z-index: 5; max-height: 70%; overflow-y: auto; }
 
+.filter-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+.filter-btn {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-btn:hover { color: var(--text); }
+.filter-btn.active { background: var(--accent, #0b3d91); color: #fff; border-color: transparent; }
+
+
 .maplibregl-popup-content { background: var(--panel); color: var(--text); border-radius: 8px; }
 
 .fleet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

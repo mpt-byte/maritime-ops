@@ -7,14 +7,49 @@ interface Props {
   lon?: number;
 }
 
+interface FilterCategory {
+  id: string;
+  label: string;
+  layers: string[];
+}
+
+const FILTERS: FilterCategory[] = [
+  { id: 'all', label: 'All', layers: ['wind_speed', 'wind_dir', 'wave_height', 'wave_period', 'wave_dir', 'pressure', 'sea_temp', 'air_temp', 'precipitation', 'cloud_cover', 'humidity', 'visibility'] },
+  { id: 'wind', label: 'Wind', layers: ['wind_speed', 'wind_dir'] },
+  { id: 'storms', label: 'Storms', layers: ['pressure', 'precipitation', 'wind_speed'] },
+  { id: 'swells', label: 'Swells', layers: ['wave_height', 'wave_period'] },
+  { id: 'headseas', label: 'Head seas', layers: ['wave_height', 'wave_dir', 'wave_period'] },
+  { id: 'current', label: 'Current', layers: ['sea_temp', 'wave_dir'] },
+  { id: 'sea', label: 'Sea', layers: ['sea_temp', 'wave_height', 'wave_period'] },
+  { id: 'sky', label: 'Sky', layers: ['cloud_cover', 'precipitation', 'humidity', 'visibility', 'air_temp'] },
+];
+
+const LAYER_LABELS: Record<string, string> = {
+  wind_speed: 'Wind speed',
+  wind_dir: 'Wind direction',
+  wave_height: 'Wave height',
+  wave_period: 'Wave period',
+  wave_dir: 'Wave direction',
+  pressure: 'Pressure',
+  sea_temp: 'Sea temperature',
+  air_temp: 'Air temperature',
+  precipitation: 'Precipitation',
+  cloud_cover: 'Cloud cover',
+  humidity: 'Humidity',
+  visibility: 'Visibility',
+};
+
 export function WeatherPanel({ lat, lon }: Props) {
   const model = useAppStore((s) => s.weatherModel);
   const layer = useAppStore((s) => s.weatherLayer);
   const setLayer = useAppStore((s) => s.setWeatherLayer);
+  const filter = useAppStore((s) => s.weatherFilter);
+  const setFilter = useAppStore((s) => s.setWeatherFilter);
   const { data, loading, error } = useWeatherPoint(lat, lon, model, 24);
   const [hour, setHour] = useState(0);
-
   const current = data[hour] ?? data[0];
+
+  const available = FILTERS.find((f) => f.id === filter)?.layers ?? FILTERS[0]!.layers;
 
   return (
     <div className="weather-panel panel">
@@ -45,10 +80,23 @@ export function WeatherPanel({ lat, lon }: Props) {
         </>
       )}
       <div className="col" style={{ marginTop: 8 }}>
-        <label className="small muted">Layer</label>
+        <label className="small muted">Filter</label>
+        <div className="filter-buttons">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              className={`filter-btn ${filter === f.id ? 'active' : ''}`}
+              onClick={() => {
+                setFilter(f.id);
+                if (!f.layers.includes(layer)) setLayer(f.layers[0]!);
+              }}
+            >{f.label}</button>
+          ))}
+        </div>
+        <label className="small muted" style={{ marginTop: 8 }}>Layer</label>
         <select value={layer} onChange={(e) => setLayer(e.target.value)}>
-          {['wind_speed', 'wind_dir', 'wave_height', 'wave_period', 'pressure', 'sea_temp', 'air_temp', 'precipitation', 'cloud_cover', 'humidity', 'visibility'].map((l) => (
-            <option key={l} value={l}>{l}</option>
+          {available.map((l) => (
+            <option key={l} value={l}>{LAYER_LABELS[l] ?? l}</option>
           ))}
         </select>
       </div>

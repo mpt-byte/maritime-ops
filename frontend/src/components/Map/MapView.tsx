@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAppStore } from '../../stores/fleetStore';
-
-const DEFAULT_STYLE = import.meta.env.VITE_MAP_TILE_URL ?? 'https://demotiles.maplibre.org/style.json';
+import { nauticalStyle } from '../../map/nauticalStyle';
 
 export function MapView({
   onMapReady,
@@ -16,9 +15,10 @@ export function MapView({
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const override = import.meta.env.VITE_MAP_TILE_URL;
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: DEFAULT_STYLE,
+      style: override && override.trim() !== '' ? override : nauticalStyle(),
       center: [12, 45],
       zoom: 4,
     });
