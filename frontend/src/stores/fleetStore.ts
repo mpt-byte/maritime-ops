@@ -14,6 +14,8 @@ interface AppState {
   setWeatherLayer: (l: string) => void;
   weatherFilter: string;
   setWeatherFilter: (f: string) => void;
+  forecastDays: number;
+  setForecastDays: (d: number) => void;
   showWeather: boolean;
   setShowWeather: (b: boolean) => void;
   showDensity: boolean;
@@ -39,6 +41,8 @@ export const useAppStore = create<AppState>((set) => ({
   setWeatherLayer: (l) => set({ weatherLayer: l }),
   weatherFilter: 'all',
   setWeatherFilter: (f) => set({ weatherFilter: f }),
+  forecastDays: 1,
+  setForecastDays: (d) => set({ forecastDays: d }),
   showWeather: false,
   setShowWeather: (b) => set({ showWeather: b }),
   showDensity: false,

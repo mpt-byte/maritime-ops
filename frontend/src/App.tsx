@@ -18,7 +18,8 @@ import { WeatherPanel } from './components/Weather/WeatherPanel';
 import { ModelSelector } from './components/Weather/ModelSelector';
 import { useAISWebSocket } from './hooks/useAISWebSocket';
 import { useAppStore } from './stores/fleetStore';
-import { api } from './utils/api';
+import { api, isUsingOverride } from './utils/api';
+import { fetchOpenMeteoPoint } from './utils/openMeteo';
 import type { VesselPosition, WeatherPoint } from './types/index';
 
 export function App() {
@@ -36,6 +37,7 @@ export function App() {
   const showDensity = useAppStore((s) => s.showDensity);
   const weatherModel = useAppStore((s) => s.weatherModel);
   const weatherLayer = useAppStore((s) => s.weatherLayer);
+  const forecastDays = useAppStore((s) => s.forecastDays);
 
   const { positions, connected, subscribe } = useAISWebSocket();
 
@@ -77,13 +79,19 @@ export function App() {
       const b = map.getBounds();
       const samples: WeatherPoint[] = [];
       const steps = 6;
+      const useBackend = isUsingOverride();
       for (let i = 0; i < steps; i++) {
         for (let j = 0; j < steps; j++) {
           const lon = b.getWest() + ((b.getEast() - b.getWest()) * i) / (steps - 1);
           const lat = b.getSouth() + ((b.getNorth() - b.getSouth()) * j) / (steps - 1);
           try {
-            const r = await api.weatherPoint(lat, lon, weatherModel, 24);
-            if (r.data[0]) samples.push(r.data[0]);
+            if (useBackend) {
+              const r = await api.weatherPoint(lat, lon, weatherModel, Math.min(168, forecastDays * 24));
+              if (r.data[0]) samples.push(r.data[0]);
+            } else {
+              const r = await fetchOpenMeteoPoint(lat, lon, weatherModel, forecastDays);
+              if (r.data[0]) samples.push(r.data[0]);
+            }
           } catch {
             // ignore failures per cell
           }
@@ -95,7 +103,7 @@ export function App() {
     void load();
     map.on('moveend', onMove);
     return () => { map.off('moveend', onMove); };
-  }, [map, showWeather, weatherModel]);
+  }, [map, showWeather, weatherModel, forecastDays]);
 
   const liveSidebar = useMemo(() => (
     <>

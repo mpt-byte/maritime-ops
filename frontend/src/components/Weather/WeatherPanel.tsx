@@ -45,9 +45,18 @@ export function WeatherPanel({ lat, lon }: Props) {
   const setLayer = useAppStore((s) => s.setWeatherLayer);
   const filter = useAppStore((s) => s.weatherFilter);
   const setFilter = useAppStore((s) => s.setWeatherFilter);
-  const { data, loading, error } = useWeatherPoint(lat, lon, model, 24);
+  const forecastDays = useAppStore((s) => s.forecastDays);
+  const setForecastDays = useAppStore((s) => s.setForecastDays);
+  const { data, loading, error, source } = useWeatherPoint(lat, lon, model, forecastDays);
   const [hour, setHour] = useState(0);
   const current = data[hour] ?? data[0];
+
+  const DAYS: Array<{ id: number; label: string }> = [
+    { id: 1, label: '1d' },
+    { id: 3, label: '3d' },
+    { id: 5, label: '5d' },
+    { id: 7, label: '7d' },
+  ];
 
   const available = FILTERS.find((f) => f.id === filter)?.layers ?? FILTERS[0]!.layers;
 
@@ -55,6 +64,18 @@ export function WeatherPanel({ lat, lon }: Props) {
     <div className="weather-panel panel">
       <h3>Point forecast {lat != null ? `${lat.toFixed(2)},${lon?.toFixed(2)}` : ''}</h3>
       {lat == null && <div className="small muted">Click the map to pick a point.</div>}
+      <div className="row between" style={{ margin: '6px 0' }}>
+        <div className="filter-buttons">
+          {DAYS.map((d) => (
+            <button
+              key={d.id}
+              className={`filter-btn ${forecastDays === d.id ? 'active' : ''}`}
+              onClick={() => { setForecastDays(d.id); setHour(0); }}
+            >{d.label}</button>
+          ))}
+        </div>
+        <span className="small muted" title="Data source">{source === 'backend' ? 'API' : source === 'open-meteo' ? 'Open-Meteo' : ''}</span>
+      </div>
       {loading && <div className="loading small">Loading…</div>}
       {error && <div className="error small">{error}</div>}
       {current && (
