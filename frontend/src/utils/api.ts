@@ -3,17 +3,62 @@ import type {
   WeatherPoint, Alert, AlertRule,
 } from '../types/index';
 
-const API_BASE = (import.meta.env.VITE_API_BASE ?? '/api/v1').replace(/\/$/, '');
-const WS_BASE = (import.meta.env.VITE_WS_BASE ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`).replace(/\/$/, '');
+const API_BASE_KEY = 'mo:apiBase';
+const WS_BASE_KEY = 'mo:wsBase';
+
+const ENV_API_BASE = (import.meta.env.VITE_API_BASE ?? '/api/v1').replace(/\/$/, '');
+const ENV_WS_BASE = (import.meta.env.VITE_WS_BASE ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`).replace(/\/$/, '');
+
+function readStored(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+let apiBase = (readStored(API_BASE_KEY) ?? ENV_API_BASE).replace(/\/$/, '');
+let wsBase = (readStored(WS_BASE_KEY) ?? ENV_WS_BASE).replace(/\/$/, '');
+
+export function configureApi(opts: { apiBase?: string; wsBase?: string }): void {
+  if (opts.apiBase != null && opts.apiBase !== '') {
+    apiBase = opts.apiBase.replace(/\/$/, '');
+    try { localStorage.setItem(API_BASE_KEY, apiBase); } catch { /* ignore */ }
+  }
+  if (opts.wsBase != null && opts.wsBase !== '') {
+    wsBase = opts.wsBase.replace(/\/$/, '');
+    try { localStorage.setItem(WS_BASE_KEY, wsBase); } catch { /* ignore */ }
+  }
+}
+
+export function resetApi(): void {
+  apiBase = ENV_API_BASE;
+  wsBase = ENV_WS_BASE;
+  try { localStorage.removeItem(API_BASE_KEY); localStorage.removeItem(WS_BASE_KEY); } catch { /* ignore */ }
+}
+
+export function inferWsFromApi(api: string): string {
+  try {
+    if (/^wss?:\/\//.test(api)) return api.replace(/\/$/, '');
+    const u = new URL(api);
+    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    u.pathname = u.pathname.replace(/\/api\/v\d+\/?$/, '') + '/ws';
+    return u.toString().replace(/\/$/, '');
+  } catch {
+    return api.replace(/^http/, 'ws').replace(/\/api\/v\d+$/, '/ws').replace(/\/$/, '');
+  }
+}
+
+export function currentApiBase(): string { return apiBase; }
+export function currentWsBase(): string { return wsBase; }
+export function isUsingOverride(): boolean {
+  return readStored(API_BASE_KEY) != null || readStored(WS_BASE_KEY) != null;
+}
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
+  const res = await fetch(`${apiBase}${path}`);
   if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
   return (await res.json()) as T;
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${apiBase}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -23,8 +68,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
-  base: API_BASE,
-  wsBase: WS_BASE,
+  base: () => apiBase,
+  wsBase: () => wsBase,
+  configure: configureApi,
+  reset: resetApi,
+  isOverride: isUsingOverride,
   health: () => get<{ status: string; db: boolean; redis: boolean }>('/health'),
   vessels: (params: Record<string, string | number> = {}) => {
     const qs = new URLSearchParams();
@@ -55,8 +103,8 @@ export const api = {
   weatherLayers: () => get<{ models: Record<string, string>; layers: Array<{ id: string; label: string; unit: string }> }>('/weather/layers'),
   weatherRoute: (points: string, model = 'best_match', hours = 24) =>
     get(`/weather/route?points=${points}&model=${model}&hours=${hours}`),
-  exportVesselsCsvUrl: () => `${API_BASE}/export/vessels.csv`,
-  exportVoyageGeoJsonUrl: (id: number, mmsi: number) => `${API_BASE}/export/voyages/${id}.geojson?mmsi=${mmsi}`,
-  exportVoyageKmlUrl: (id: number, mmsi: number) => `${API_BASE}/export/voyages/${id}.kml?mmsi=${mmsi}`,
-  exportDensityUrl: () => `${API_BASE}/export/density.geojson`,
+  exportVesselsCsvUrl: () => `${apiBase}/export/vessels.csv`,
+  exportVoyageGeoJsonUrl: (id: number, mmsi: number) => `${apiBase}/export/voyages/${id}.geojson?mmsi=${mmsi}`,
+  exportVoyageKmlUrl: (id: number, mmsi: number) => `${apiBase}/export/voyages/${id}.kml?mmsi=${mmsi}`,
+  exportDensityUrl: () => `${apiBase}/export/density.geojson`,
 };

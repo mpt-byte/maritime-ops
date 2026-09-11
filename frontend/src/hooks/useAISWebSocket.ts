@@ -23,7 +23,7 @@ export function useAISWebSocket(): AISWebSocketState {
   }, []);
 
   const connect = useCallback(() => {
-    const url = `${api.wsBase}/positions`;
+    const url = `${api.wsBase()}/positions`;
     let ws: WebSocket;
     try {
       ws = new WebSocket(url);

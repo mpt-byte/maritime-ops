@@ -108,6 +108,31 @@ input, select {
 }
 .panel h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-dim); }
 
+.conn { display: inline-flex; align-items: center; gap: 6px; }
+.conn .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-dim);
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.conn.ok .dot { background: var(--ok); }
+.conn.down .dot { background: #d33; }
+.conn.warn .dot { background: var(--warn); }
+.conn-panel {
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 260px; max-width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  z-index: 6;
+}
+.conn-panel input { width: 100%; box-sizing: border-box; }
+.conn-panel .row.gap { margin-top: 4px; }
+button.primary { background: var(--accent, #0b3d91); color: #fff; border-color: transparent; }
+
+
 .row { display: flex; gap: 8px; align-items: center; }
 .row.between { justify-content: space-between; }
 .col { display: flex; flex-direction: column; gap: 8px; }
