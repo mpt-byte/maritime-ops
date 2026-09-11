@@ -1,0 +1,119 @@
+# Production-ish single-host deployment for Maritime Ops.
+# One command brings up: Caddy (TLS + reverse proxy), built frontend (static),
+# backend API + WebSocket, Postgres (Timescale+PostGIS), Redis.
+#
+# Usage:
+#   cp .env.example .env  # then set PUBLIC_DOMAIN, AISSTREAM_API_KEY, JWT_SECRET, ADMIN_PASSWORD, POSTGRES_PASSWORD
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Frontend is built in its Docker image with VITE_API_BASE=/api/v1 and
+# VITE_WS_BASE=/ws so the same-origin Caddy proxies everything; no CORS needed.
+# You can still override the API base at runtime in the UI (Toolbar > Custom API).
+
+name: maritime-ops-prod
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: maritime-caddy
+    restart: unless-stopped
+    depends_on: [backend]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:-localhost}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api/v1
+        VITE_WS_BASE: /ws
+        VITE_MAP_TILE_URL: ${VITE_MAP_TILE_URL:-https://demotiles.maplibre.org/style.json}
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: maritime-backend
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://maritime:${POSTGRES_PASSWORD:-change-me-in-production}@postgres:5432/maritime}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 4000
+      API_PREFIX: ${API_PREFIX:-/api/v1}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      JWT_SECRET: ${JWT_SECRET:-replace-with-a-long-random-string}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-me-admin}
+      AISSTREAM_API_KEY: ${AISSTREAM_API_KEY:-}
+      AISSTREAM_BBOXES: ${AISSTREAM_BBOXES:--180,-90,180,90}
+      AISSTREAM_ENABLED: ${AISSTREAM_ENABLED:-true}
+      AISHUB_API_KEY: ${AISHUB_API_KEY:-}
+      AISHUB_ENABLED: ${AISHUB_ENABLED:-false}
+      AISHUB_POLL_INTERVAL_MS: ${AISHUB_POLL_INTERVAL_MS:-60000}
+      NMEA_ENABLED: ${NMEA_ENABLED:-false}
+      NMEA_UDP_PORT: ${NMEA_UDP_PORT:-10110}
+      OPEN_METEO_API_KEY: ${OPEN_METEO_API_KEY:-}
+      OPEN_METEO_BASE_URL: ${OPEN_METEO_BASE_URL:-https://api.open-meteo.com/v1}
+      OPEN_METEO_CACHE_TTL_MS: ${OPEN_METEO_CACHE_TTL_MS:-3600000}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.com}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://${PUBLIC_DOMAIN:-localhost}}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: timescale/timescaledb-postgis:pg16-ts2.17
+    container_name: maritime-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-maritime}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-in-production}
+      POSTGRES_DB: ${POSTGRES_DB:-maritime}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./backend/src/database/schema.sql:/docker-entrypoint-initdb.d/02-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-maritime}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: maritime-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+# Caddy proxies to backend (api/ws) and frontend (static nginx) by service name.
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

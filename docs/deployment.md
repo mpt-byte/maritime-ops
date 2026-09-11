@@ -12,21 +12,61 @@ Services:
 - API:         http://localhost:4000/api/v1
 - Swagger:     http://localhost:4000/api/v1/docs
 
-## Production with TLS (Caddy)
+## Production with TLS (Caddy) — one host
 
-Example Caddyfile (place behind the frontend):
+A ready `docker-compose.prod.yml` + `Caddyfile` ship in the repo root. One
+Caddy terminates TLS and routes everything on a single origin:
 
+- `/api/v1/*` and `/ws/*` → backend (`backend:4000`)
+- everything else → frontend nginx (`frontend:80`, static PWA + SPA fallback)
+
+The frontend is built with `VITE_API_BASE=/api/v1` and `VITE_WS_BASE=/ws`, so all
+calls are same-origin (no CORS needed).
+
+```bash
+cp .env.example .env
+# In .env set at least:
+#   PUBLIC_DOMAIN=maritime.example.com
+#   AISSTREAM_API_KEY=...          (free, for live AIS)
+#   JWT_SECRET=...                  (long random string)
+#   ADMIN_PASSWORD=...
+#   POSTGRES_PASSWORD=...
+docker compose -f docker-compose.prod.yml up --build -d
 ```
-maritime.example.com {
-    reverse_proxy frontend:80
-}
-api.maritime.example.com {
-    reverse_proxy backend:4000
-}
+
+Point your domain's DNS A/AAAA record at the host. On a real domain Caddy
+obtains Let's Encrypt TLS automatically on first request. With
+`PUBLIC_DOMAIN=localhost` Caddy serves plain HTTP on `:80` (handy for LAN tests).
+
+Verify:
+```bash
+curl https://maritime.example.com/api/v1/health   # {"status":"ok",...}
 ```
 
-In `docker-compose.yml` add a `caddy` service using `caddy:2-alpine` and mount
-your `Caddyfile`. Set `PUBLIC_BASE_URL=https://maritime.example.com`.
+## Backend-only deployment (Fly.io) + GitHub Pages frontend
+
+For a cheap full-stack demo you can split the deployment:
+- **Frontend** on GitHub Pages (the `pages.yml` workflow already builds it).
+- **Backend** on Fly.io (API + WebSocket + AIS/weather workers in one Machine).
+
+Backend (`fly.toml` + `fly.backend.Dockerfile` at repo root):
+```bash
+fly deploy
+fly secrets set JWT_SECRET=... ADMIN_PASSWORD=... AISSTREAM_API_KEY=... \
+                DATABASE_URL=... REDIS_URL=... \
+                PUBLIC_BASE_URL=https://maritime.fly.dev
+```
+
+Fly Postgres does **not** ship TimescaleDB/PostGIS, so run a Fly Machine with
+`timescale/timescaledb-postgis:pg16-ts2.17` (or external managed Postgres), and a
+small Redis Machine (or Upstash). Point `DATABASE_URL` and `REDIS_URL` at them.
+
+Wire the Pages frontend to the Fly backend:
+1. Open the demo at `https://<account>.github.io/maritime-ops/`
+2. Click the **Default API** button (top toolbar, far right) → paste
+   `https://maritime.fly.dev/api/v1` → **Apply & reload**.
+3. The dot turns green when `/health` responds; you can now search ships by IMO
+   and watch live AIS positions.
 
 ## Required free keys
 

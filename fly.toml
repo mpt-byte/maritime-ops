@@ -1,0 +1,62 @@
+# Fly.io deployment for the Maritime Ops backend (API + WebSocket + AIS/weather workers).
+#
+# The backend runs as a single process: Fastify serves /api/v1 + /ws, and the
+# AIS stream ingestion, demo, weather-cache, and alert workers all run in-process
+# (see backend/src/index.ts), so one Fly Machine is enough.
+#
+# Datastores (provision separately):
+#   - Postgres (Timescale + PostGIS): Fly Postgres does NOT ship Timescale/PostGIS.
+#     Use a Fly Machine running the timescale/timescaledb-postgis image, or an
+#     external managed Postgres. Point DATABASE_URL at it.
+#   - Redis: small Fly Machine running redis:7-alpine, or Upstash. Point REDIS_URL.
+#
+# Setup:
+#   fly launch --no-deploy   # (skip, this file is ready)
+#   fly secrets set JWT_SECRET=... ADMIN_PASSWORD=... AISSTREAM_API_KEY=... \
+#                   DATABASE_URL=... REDIS_URL=... PUBLIC_BASE_URL=https://maritime.fly.dev
+#   fly deploy
+#
+# Then point the GitHub Pages frontend's "Custom API" panel at:
+#   https://maritime.fly.dev/api/v1
+
+app = "maritime-ops-backend"
+primary_region = "cdg"
+kill_signal = "SIGTERM"
+kill_timeout = 30
+
+[build]
+  dockerfile = "fly.backend.Dockerfile"
+
+[env]
+  BACKEND_HOST = "0.0.0.0"
+  BACKEND_PORT = "4000"
+  API_PREFIX = "/api/v1"
+  CORS_ORIGIN = "*"
+  AISSTREAM_ENABLED = "true"
+  AISSTREAM_BBOXES = "-180,-90,180,90"
+  OPEN_METEO_BASE_URL = "https://api.open-meteo.com/v1"
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+# WebSocket (/ws/positions) is upgraded automatically by Fly's HTTP service.
+[[http_service.checks]]
+  interval = "20s"
+  timeout = "5s"
+  grace_period = "30s"
+  method = "get"
+  path = "/api/v1/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
