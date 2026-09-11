@@ -1,0 +1,8 @@
+# PostgreSQL data
+POSTGRES_USER=maritime
+POSTGRES_PASSWORD=change-me-in-production
+POSTGRES_DB=maritime
+POSTGRES_DATA=./postgres-data
+
+# Redis data
+REDIS_DATA=./redis-data
