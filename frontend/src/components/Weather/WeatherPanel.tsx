@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useWeatherPoint } from '../../hooks/useWeatherData';
 import { useAppStore } from '../../stores/fleetStore';
+import { WeatherModal } from './WeatherModal';
+import type { SeriesDef } from './WeatherChart';
 
 interface Props {
   lat?: number;
@@ -39,6 +41,21 @@ const LAYER_LABELS: Record<string, string> = {
   visibility: 'Visibility',
 };
 
+const SERIES_BY_LAYER: Record<string, SeriesDef> = {
+  wind_speed: { key: 'wind_speed', label: 'Wind speed', unit: 'm/s', color: '#2a9d8f' },
+  wind_dir: { key: 'wind_dir', label: 'Wind dir', unit: '°', color: '#577590' },
+  wave_height: { key: 'wave_height', label: 'Wave height', unit: 'm', color: '#1d7ec9' },
+  wave_period: { key: 'wave_period', label: 'Wave period', unit: 's', color: '#76c893' },
+  wave_dir: { key: 'wave_dir', label: 'Wave dir', unit: '°', color: '#577590' },
+  pressure: { key: 'pressure', label: 'Pressure', unit: 'hPa', color: '#0b3d91' },
+  sea_temp: { key: 'sea_temp', label: 'Sea temp', unit: '°C', color: '#e76f51' },
+  air_temp: { key: 'air_temp', label: 'Air temp', unit: '°C', color: '#f4a261' },
+  precipitation: { key: 'precipitation', label: 'Precip', unit: 'mm', color: '#56b4e9' },
+  cloud_cover: { key: 'cloud_cover', label: 'Cloud', unit: '%', color: '#a8a8a8' },
+  humidity: { key: 'humidity', label: 'Humidity', unit: '%', color: '#9d4edd' },
+  visibility: { key: 'visibility', label: 'Visibility', unit: 'm', color: '#588157' },
+};
+
 export function WeatherPanel({ lat, lon }: Props) {
   const model = useAppStore((s) => s.weatherModel);
   const layer = useAppStore((s) => s.weatherLayer);
@@ -49,6 +66,7 @@ export function WeatherPanel({ lat, lon }: Props) {
   const setForecastDays = useAppStore((s) => s.setForecastDays);
   const { data, loading, error, source } = useWeatherPoint(lat, lon, model, forecastDays);
   const [hour, setHour] = useState(0);
+  const [chartOpen, setChartOpen] = useState(false);
   const current = data[hour] ?? data[0];
 
   const DAYS: Array<{ id: number; label: string }> = [
@@ -59,6 +77,8 @@ export function WeatherPanel({ lat, lon }: Props) {
   ];
 
   const available = FILTERS.find((f) => f.id === filter)?.layers ?? FILTERS[0]!.layers;
+  const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0]!;
+  const chartSeries = activeFilter.layers.map((l) => SERIES_BY_LAYER[l]).filter((s): s is SeriesDef => s != null);
 
   return (
     <div className="weather-panel panel">
@@ -120,7 +140,24 @@ export function WeatherPanel({ lat, lon }: Props) {
             <option key={l} value={l}>{LAYER_LABELS[l] ?? l}</option>
           ))}
         </select>
+        <button
+          className="primary"
+          style={{ marginTop: 8 }}
+          disabled={data.length === 0}
+          onClick={() => setChartOpen(true)}
+        >📈 Charts ({activeFilter.label})</button>
       </div>
+      <WeatherModal
+        open={chartOpen}
+        onClose={() => setChartOpen(false)}
+        data={data}
+        categoryLabel={activeFilter.label}
+        series={chartSeries}
+        model={model}
+        lat={lat}
+        lon={lon}
+        days={forecastDays}
+      />
     </div>
   );
 }

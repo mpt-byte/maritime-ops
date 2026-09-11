@@ -223,4 +223,19 @@ button.primary { background: var(--accent, #0b3d91); color: #fff; border-color: 
   .sidebar { width: 100%; min-width: 0; height: 45%; border-right: none; border-bottom: 1px solid var(--border); }
   .main { height: 55%; }
   .weather-panel { width: calc(100% - 24px); }
+  .weather-modal { width: calc(100vw - 24px); max-width: 560px; }
 }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 16px 48px rgba(0,0,0,0.45); width: 560px; max-width: calc(100vw - 32px); max-height: calc(100vh - 48px); overflow-y: auto; padding: 16px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.modal-header h3 { margin: 0; font-size: 14px; }
+.modal-close { background: transparent; border: none; font-size: 22px; line-height: 1; color: var(--text-dim); cursor: pointer; padding: 0 4px; }
+.modal-close:hover { color: var(--text); }
+.weather-modal { width: 580px; }
+
+.weather-chart { width: 100%; }
+.weather-chart svg { display: block; }
+.weather-chart-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; font-size: 11px; color: var(--text-dim); }
+.legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.legend-swatch { display: inline-block; width: 10px; height: 3px; border-radius: 1px; }
