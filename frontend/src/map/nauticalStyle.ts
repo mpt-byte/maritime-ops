@@ -3,20 +3,15 @@ import type { StyleSpecification } from 'maplibre-gl';
 export function nauticalStyle(): StyleSpecification {
   return {
     version: 8,
-    name: 'Maritime Ops nautical chart',
+    name: 'Maritime Ops nautical chart (OSM + OpenSeaMap)',
     glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
-      'carto-base': {
+      'osm-base': {
         type: 'raster',
-        tiles: [
-          'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-          'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-          'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-          'https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-        ],
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
         tileSize: 256,
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        maxzoom: 20,
+        attribution: '&copy; OpenStreetMap contributors',
+        maxzoom: 19,
       },
       seamark: {
         type: 'raster',
@@ -28,7 +23,7 @@ export function nauticalStyle(): StyleSpecification {
     },
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': '#bfe3f7' } },
-      { id: 'carto-base', type: 'raster', source: 'carto-base' },
+      { id: 'osm-base', type: 'raster', source: 'osm-base' },
       { id: 'seamark', type: 'raster', source: 'seamark' },
     ],
   };
