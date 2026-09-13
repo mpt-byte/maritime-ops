@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
 import type { FastifyInstance } from 'fastify';
 import { getRedis, REDIS_KEYS } from '../database/redis.js';
-import { getAllLivePositions, toVesselPosition, type PositionEnvelope } from '../services/ais-ingestion.service.js';
+import { getAllLivePositions, getVesselMeta, toVesselPosition, type PositionEnvelope } from '../services/ais-ingestion.service.js';
 import type { VesselPosition } from '../schemas/index.js';
 
 interface ClientState {
@@ -51,6 +51,14 @@ function parseSubscribe(payload: unknown): ClientState {
 }
 
 export async function broadcastPosition(p: PositionEnvelope): Promise<void> {
+  if (p.name == null || p.ship_type == null) {
+    const meta = await getVesselMeta(p.mmsi);
+    if (meta) {
+      if (p.name == null) p.name = meta.name;
+      if (p.ship_type == null) p.ship_type = meta.ship_type;
+      if (p.flag == null) p.flag = meta.flag;
+    }
+  }
   const payload = { type: 'position', data: toVesselPosition(p) };
   for (const [ws, state] of clients) {
     if (!inBbox(p, state.bbox) || !inMmsiFilter(p, state.mmsi)) continue;

@@ -4,6 +4,8 @@ import { MapView } from './components/Map/MapView';
 import { VesselLayer } from './components/Map/VesselLayer';
 import { WeatherLayer } from './components/Map/WeatherLayer';
 import { DensityHeatmap } from './components/Map/DensityHeatmap';
+import { MapLayers } from './components/Map/MapLayers';
+import { MapLegend } from './components/Map/MapLegend';
 import { WindParticles } from './components/Weather/WindParticles';
 import { Sidebar } from './components/Common/Sidebar';
 import { Toolbar } from './components/Common/Toolbar';
@@ -166,6 +168,8 @@ export function App() {
             )}
           </>
         )}
+        <MapLayers />
+        <MapLegend vesselCount={positions.size} />
         <Toolbar />
         <NotificationBar onSelectVessel={(m) => { setSelectedMmsi(m); setViewMode('live'); }} />
       </div>

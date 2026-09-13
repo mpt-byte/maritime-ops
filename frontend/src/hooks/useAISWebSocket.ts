@@ -55,7 +55,8 @@ export function useAISWebSocket(): AISWebSocketState {
         const p = msg.data as VesselPosition;
         setPositions((prev) => {
           const next = new Map(prev);
-          next.set(p.mmsi, p);
+          const existing = prev.get(p.mmsi);
+          next.set(p.mmsi, existing ? { ...existing, ...p, name: p.name ?? existing.name, ship_type: p.ship_type ?? existing.ship_type, flag: p.flag ?? existing.flag } : p);
           return next;
         });
       }

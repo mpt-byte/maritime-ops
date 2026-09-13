@@ -19,6 +19,7 @@ import { startAisStreamWorker } from './workers/ais-stream.worker.js';
 import { startWeatherCacheWorker } from './workers/weather-cache.worker.js';
 import { startDemoWorker } from './workers/demo.js';
 import { startAlertEvaluator } from './services/alert.service.js';
+import { backfillVesselMeta } from './services/ais-ingestion.service.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -80,7 +81,15 @@ async function bootstrap(): Promise<void> {
   // Ensure schema exists (best-effort) before serving.
   try {
     getPool();
-    if (await pingDatabase()) app.log.info('database reachable');
+    if (await pingDatabase()) {
+      app.log.info('database reachable');
+      try {
+        await backfillVesselMeta();
+        app.log.info('vessel metadata cache backfilled');
+      } catch (err) {
+        app.log.warn({ err }, 'failed to backfill vessel metadata cache');
+      }
+    }
   } catch (err) {
     app.log.warn({ err }, 'database not reachable at startup — serving anyway');
   }

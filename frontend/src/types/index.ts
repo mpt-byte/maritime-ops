@@ -26,6 +26,9 @@ export interface VesselPosition {
   destination?: string;
   eta?: string;
   source?: string;
+  name?: string;
+  ship_type?: number;
+  flag?: string;
 }
 
 export type VesselStatus = 'unknown' | 'stopped' | 'in_port' | 'underway';
