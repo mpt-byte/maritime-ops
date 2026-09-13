@@ -26,6 +26,8 @@ export const REDIS_KEYS = {
   positionsSet: 'positions:index',
   stream: 'positions:stream',
   weatherChannel: 'weather:stream',
+  meta: (mmsi: number) => `meta:${mmsi}`,
 } as const;
 
 export const POSITION_TTL_SECONDS = 600;
+export const META_TTL_SECONDS = 86400;

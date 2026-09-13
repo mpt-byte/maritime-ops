@@ -14,6 +14,9 @@ export const VesselPosition = z.object({
   destination: z.string().optional(),
   eta: z.string().datetime().optional(),
   source: z.string().optional(),
+  name: z.string().optional(),
+  ship_type: z.number().int().optional(),
+  flag: z.string().optional(),
 });
 export type VesselPosition = z.infer<typeof VesselPosition>;
 
